@@ -68,12 +68,12 @@ cp .env.example .env
 如果要启用 LLM 汇总，在 `.env` 中填入：
 
 ```bash
-OPENAI_API_KEY=your_api_key_here
+OPENAI_API_KEY= "Your OpenAI API Key"
 ```
 
 ## 运行
 
-生成默认三家公司报告：
+生成默认公司报告：
 
 ```bash
 python -m src.company_news_agent.agent
