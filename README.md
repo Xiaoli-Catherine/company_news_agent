@@ -1,6 +1,6 @@
 # Company Stock News Agent
 
-一个用于搜索指定公司股票相关新闻、用 LLM 汇总新闻要点、并生成 HTML 和 PDF 报告的 Agent 框架。
+一个用于搜索指定公司股票相关新闻、用 LLM 汇总新闻要点、并生成 HTML 和 PDF 报告的 Agent。
 
 默认关注：
 
