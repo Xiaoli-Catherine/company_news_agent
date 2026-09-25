@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from datetime import datetime
+import hashlib
+from io import BytesIO
 from pathlib import Path
 import re
 from urllib.request import Request, urlopen
@@ -10,6 +12,13 @@ from .types import CompanyReport, NewsCluster, NewsItem
 
 
 MAX_PDF_SOURCES_PER_CLUSTER = 5
+CHINESE_FONT_NAME = "NotoSansSC"
+CHINESE_FONT_PATH = Path("assets/fonts/NotoSansSC-Regular.ttf")
+CHINESE_FONT_URL = (
+    "https://raw.githubusercontent.com/google/fonts/main/"
+    "ofl/notosanssc/NotoSansSC%5Bwght%5D.ttf"
+)
+CHINESE_FONT_SHA256 = "a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da"
 
 
 def build_pdf_report(
@@ -102,12 +111,12 @@ def _styles() -> dict[str, ParagraphStyle]:
 
     styles = getSampleStyleSheet()
     for style_name in ("Title", "Heading1", "Heading2", "Normal", "BodyText"):
-        styles[style_name].fontName = "STSong-Light"
+        styles[style_name].fontName = CHINESE_FONT_NAME
     styles.add(
         ParagraphStyle(
             name="Meta",
             parent=styles["Normal"],
-            fontName="STSong-Light",
+            fontName=CHINESE_FONT_NAME,
             fontSize=9,
             textColor=colors.HexColor("#5f6368"),
             leading=12,
@@ -117,7 +126,7 @@ def _styles() -> dict[str, ParagraphStyle]:
         ParagraphStyle(
             name="Body",
             parent=styles["BodyText"],
-            fontName="STSong-Light",
+            fontName=CHINESE_FONT_NAME,
             fontSize=10,
             leading=15,
             spaceAfter=5,
@@ -127,7 +136,7 @@ def _styles() -> dict[str, ParagraphStyle]:
         ParagraphStyle(
             name="Summary",
             parent=styles["BodyText"],
-            fontName="STSong-Light",
+            fontName=CHINESE_FONT_NAME,
             fontSize=9.5,
             leading=14.5,
             leftIndent=8,
@@ -140,7 +149,7 @@ def _styles() -> dict[str, ParagraphStyle]:
         ParagraphStyle(
             name="Source",
             parent=styles["BodyText"],
-            fontName="STSong-Light",
+            fontName=CHINESE_FONT_NAME,
             fontSize=8.2,
             leading=12,
             textColor=colors.HexColor("#3c4043"),
@@ -175,7 +184,7 @@ def _styles() -> dict[str, ParagraphStyle]:
         ParagraphStyle(
             name="Label",
             parent=styles["Normal"],
-            fontName="STSong-Light",
+            fontName=CHINESE_FONT_NAME,
             fontSize=9,
             leading=11,
             textColor=colors.HexColor("#202124"),
@@ -206,12 +215,59 @@ def _styles() -> dict[str, ParagraphStyle]:
 
 def _register_fonts() -> None:
     from reportlab.pdfbase import pdfmetrics
-    from reportlab.pdfbase.cidfonts import UnicodeCIDFont
+    from reportlab.pdfbase.ttfonts import TTFont
+
+    if CHINESE_FONT_NAME in pdfmetrics.getRegisteredFontNames():
+        return
+    font_path = _ensure_chinese_font()
+    pdfmetrics.registerFont(TTFont(CHINESE_FONT_NAME, str(font_path)))
+
+
+def _ensure_chinese_font() -> Path:
+    if CHINESE_FONT_PATH.exists() and CHINESE_FONT_PATH.stat().st_size > 0:
+        return CHINESE_FONT_PATH
+
+    CHINESE_FONT_PATH.parent.mkdir(parents=True, exist_ok=True)
+    request = Request(CHINESE_FONT_URL, headers={"User-Agent": "CompanyNewsAgent/0.1"})
+    try:
+        with urlopen(request, timeout=60) as response:
+            font_data = response.read()
+    except OSError as exc:
+        raise RuntimeError(
+            "Unable to download the Noto Sans SC font required for portable PDFs."
+        ) from exc
+
+    checksum = hashlib.sha256(font_data).hexdigest()
+    if checksum != CHINESE_FONT_SHA256:
+        raise RuntimeError(
+            "Downloaded Noto Sans SC font failed its integrity check. "
+            f"Expected {CHINESE_FONT_SHA256}, got {checksum}."
+        )
 
     try:
-        pdfmetrics.registerFont(UnicodeCIDFont("STSong-Light"))
-    except KeyError:
-        pass
+        from fontTools.ttLib import TTFont as VariableTTFont
+        from fontTools.varLib.instancer import instantiateVariableFont
+    except ImportError as exc:
+        raise RuntimeError(
+            "Missing fonttools dependency required to prepare the Chinese PDF font. "
+            "Install dependencies with: pip install -r requirements.txt"
+        ) from exc
+
+    variable_font = VariableTTFont(BytesIO(font_data))
+    regular_font = instantiateVariableFont(
+        variable_font,
+        {"wght": 400},
+        inplace=False,
+        updateFontNames=True,
+    )
+    temporary_path = CHINESE_FONT_PATH.with_suffix(".tmp")
+    try:
+        regular_font.save(temporary_path)
+        temporary_path.replace(CHINESE_FONT_PATH)
+    finally:
+        variable_font.close()
+        regular_font.close()
+    return CHINESE_FONT_PATH
 
 
 def _company_heading(report: CompanyReport, styles: dict[str, ParagraphStyle], inch: float) -> list:

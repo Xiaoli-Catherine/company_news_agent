@@ -25,6 +25,7 @@
 - 使用 LLM 将多个媒体报道的同一新闻事件整合成一条新闻
 - 每条整合新闻的新闻总结限制在 10 句话以内
 - 使用 LLM 生成每家公司的中文新闻概况、股票相关影响和来源索引
+- LLM prompt 文本放在 `src/company_news_agent/prompts/`，方便单独调整
 - 生成包含 emoji 图标、中文摘要、整合新闻、原文标题和所有报道媒体链接的 HTML
 - 使用 ReportLab 直接生成 PDF，并将 emoji 作为 PNG 图片嵌入，避免 PDF 字体不显示 emoji
 - PDF 中每条整合新闻最多展开 5 个来源，更多来源以“另有 N 个来源”概括；HTML 保留完整来源
@@ -41,11 +42,15 @@
     └── company_news_agent
         ├── __init__.py
         ├── agent.py
+        ├── companies.json
         ├── config.py
+        ├── emailer.py
         ├── html_report.py
         ├── llm.py
         ├── news.py
         ├── pdf_report.py
+        ├── prompts.py
+        ├── prompts/
         └── types.py
 ```
 
@@ -68,8 +73,22 @@ cp .env.example .env
 如果要启用 LLM 汇总，在 `.env` 中填入：
 
 ```bash
-OPENAI_API_KEY= "Your OpenAI API Key"
+OPENAI_API_KEY="Your OpenAI API Key"
 ```
+
+如果要把生成的 HTML/PDF 报告发到邮箱，在 `.env` 中填入 SMTP 配置：
+
+```bash
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=your_email@gmail.com
+SMTP_PASSWORD=your_email_app_password
+SMTP_USE_TLS=true
+EMAIL_FROM=your_email@gmail.com
+EMAIL_TO=recipient@example.com
+EMAIL_SUBJECT=公司股票新闻
+```
+
 
 ## 运行
 
@@ -117,12 +136,25 @@ python -m src.company_news_agent.agent --date-window-days 0
 python -m src.company_news_agent.agent --tickers GOOG AAPL
 ```
 
+生成报告后发送邮件：
+
+```bash
+python -m src.company_news_agent.agent --email-report
+```
+
 ## 配置
 
-主要配置在 [src/company_news_agent/config.py](src/company_news_agent/config.py)：
+公司列表在 [src/company_news_agent/companies.json](src/company_news_agent/companies.json)。每家公司可配置：
 
-- `COMPANIES`: 公司名称和股票代码
-- `COMPANIES.icon`: HTML/PDF 中区分不同公司的 emoji 图标
+- `name`: 报告中显示的公司名称
+- `ticker`: 股票代码（加载时会转换为大写，且不能重复）
+- `aliases`: Google News 搜索时使用的其他公司名称
+- `icon`: HTML/PDF 中显示的 emoji 图标
+
+增加或删除公司后，下次运行 Agent 时会自动读取新列表。文件必须是非空的 JSON 数组。
+
+其他主要配置在 [src/company_news_agent/config.py](src/company_news_agent/config.py)：
+
 - `STOCK_KEYWORDS`: 公司事件导向搜索关键词
 - `DEFAULT_MAX_ITEMS_PER_COMPANY`: 每家公司保留新闻数量，默认 `None` 表示不限制
 - `DEFAULT_LOOKBACK_DAYS`: 使用 `--all-recent` 时的默认新闻时间窗口
@@ -161,10 +193,11 @@ reports/company-stock-news.pdf
 
 HTML 由 [src/company_news_agent/html_report.py](src/company_news_agent/html_report.py) 生成，保留 emoji 字符，方便浏览器查看。
 
-PDF 由 [src/company_news_agent/pdf_report.py](src/company_news_agent/pdf_report.py) 直接生成，不调用 Chrome，也不依赖 HTML 转换。PDF 中的 emoji 会下载并缓存为 PNG 图片，默认缓存目录是：
+PDF 由 [src/company_news_agent/pdf_report.py](src/company_news_agent/pdf_report.py) 直接生成，不调用 Chrome，也不依赖 HTML 转换。为了让中文在不同 PDF 阅读器中都能正常显示，首次生成时会下载 Noto Sans SC 并嵌入 PDF。PDF 中的 emoji 也会下载并缓存为 PNG 图片。默认缓存目录是：
 
 ```text
 assets/emoji/
+assets/fonts/
 ```
 
 如果没有配置 `OPENAI_API_KEY`，Agent 仍可运行并生成报告，但新闻标题会保持原文，报告中会提示 LLM 翻译和整合未启用。

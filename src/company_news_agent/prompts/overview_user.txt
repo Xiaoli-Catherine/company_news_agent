@@ -1,0 +1,10 @@
+Company: $company_name
+Ticker: $ticker
+
+Deduplicated news topics:
+$topics
+
+Write Chinese output. 
+Be specific about the business, financial, regulatory, competitive, 
+or market implications for the stock. 
+Mention uncertainty when the supplied news does not provide enough evidence.

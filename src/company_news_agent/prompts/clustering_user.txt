@@ -1,0 +1,15 @@
+Group items that are about the same concrete news event, even if different 
+media outlets used different wording. 
+Do not group broad market commentary unless the underlying event is the same. 
+For each group, write one Chinese topic title and a detailed Chinese 
+summary of 3-5 sentences, never more than 10 sentences. 
+The summary should synthesize all grouped sources and explain: 
+what happened, who is involved, the potential stock relevance, 
+whether multiple outlets are confirming the same point, 
+and what investors may need to watch next.
+Do not invent facts beyond the supplied titles/summaries. 
+If there is a lot of information, keep only the most important points. 
+Return JSON in this exact shape: {"groups":[{"title_zh":"...",
+"summary_zh":"...","item_indexes":[1,2]}]}
+
+$payload

@@ -1,0 +1,11 @@
+Also set keep=true only for concrete company events. 
+Keep news about earnings, revenue, guidance, acquisitions, partnerships, 
+product launches, lawsuits, antitrust/regulatory actions, investigations, 
+executive changes, layoffs, business expansion or contraction, 
+major contracts, capital investment, or major operational events. 
+Set keep=false for items that are only about stock price movement, 
+market commentary, analyst ratings, price targets, technical analysis, 
+generic stock recommendations, company culture, workplace rankings, 
+office perks, or non-event interviews/commentary. 
+If an employee topic is a concrete event such as layoffs, strike, 
+union action, or lawsuit, keep=true.

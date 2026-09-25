@@ -1,0 +1,74 @@
+[
+  {
+    "name": "Alphabet / Google",
+    "ticker": "GOOG",
+    "aliases": ["Google", "Alphabet"],
+    "icon": "🔎"
+  },
+  {
+    "name": "Amazon",
+    "ticker": "AMZN",
+    "aliases": ["Amazon.com"],
+    "icon": "📦"
+  },
+  {
+    "name": "Apple",
+    "ticker": "AAPL",
+    "aliases": ["Apple Inc"],
+    "icon": "🍎"
+  },
+  {
+    "name": "Robinhood",
+    "ticker": "HOOD",
+    "aliases": ["Robinhood Markets", "Robinhood Markets Inc"],
+    "icon": "🏹"
+  },
+  {
+    "name": "Clear Secure",
+    "ticker": "YOU",
+    "aliases": ["CLEAR", "Clear Secure Inc"],
+    "icon": "🔐"
+  },
+  {
+    "name": "Waste Management",
+    "ticker": "WM",
+    "aliases": ["Waste Management Inc"],
+    "icon": "♻️"
+  },
+  {
+    "name": "Qualcomm",
+    "ticker": "QCOM",
+    "aliases": ["Qualcomm Incorporated", "Qualcomm Technologies"],
+    "icon": "📡"
+  },
+  {
+    "name": "Oklo",
+    "ticker": "OKLO",
+    "aliases": ["Oklo Inc"],
+    "icon": "⚛️"
+  },
+  {
+    "name": "Babcock & Wilcox Enterprises",
+    "ticker": "BW",
+    "aliases": ["Babcock & Wilcox", "B&W"],
+    "icon": "🏭"
+  },
+  {
+    "name": "LanzaTech Global",
+    "ticker": "LNZA",
+    "aliases": ["LanzaTech", "LanzaTech Global Inc"],
+    "icon": "🌱"
+  },
+  {
+    "name": "Micron Technology",
+    "ticker": "MU",
+    "aliases": ["Micron", "Micron Technology Inc"],
+    "icon": "💾"
+  },
+  {
+    "name": "Sandisk Corporation",
+    "ticker": "SNDK",
+    "aliases": ["SanDisk", "Sandisk"],
+    "icon": "💽"
+  }
+]

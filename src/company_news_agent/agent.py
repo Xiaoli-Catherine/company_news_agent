@@ -28,6 +28,7 @@ def run_agent(
     lookback_days: int = DEFAULT_LOOKBACK_DAYS,
     published_dates: set[date] | None = None,
     timezone_name: str = DEFAULT_TIMEZONE,
+    email_report: bool = False,
 ) -> tuple[Path, Path]:
     news_client = GoogleNewsRssClient()
     synthesizer = NewsSynthesizer(target_dates=published_dates)
@@ -60,6 +61,10 @@ def run_agent(
 
     html_path = build_html_report(reports, html_output_path, timezone_name=timezone_name)
     pdf_path = build_pdf_report(reports, output_path, timezone_name=timezone_name)
+    if email_report:
+        from .emailer import send_report_email
+
+        send_report_email(html_path=html_path, pdf_path=pdf_path, reports=reports)
     return html_path, pdf_path
 
 
@@ -122,6 +127,11 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Optional subset of tickers, for example: --tickers GOOG AAPL",
     )
+    parser.add_argument(
+        "--email-report",
+        action="store_true",
+        help="Email the generated HTML and PDF reports using SMTP settings from .env.",
+    )
     return parser.parse_args()
 
 
@@ -141,9 +151,12 @@ def main() -> None:
         lookback_days=args.days,
         published_dates=published_dates,
         timezone_name=args.timezone,
+        email_report=args.email_report,
     )
     print(f"HTML report written to: {html_path}")
     print(f"PDF report written to: {pdf_path}")
+    if args.email_report:
+        print("Email report sent.")
 
 
 def _select_companies(tickers: list[str] | None) -> tuple[Company, ...]:

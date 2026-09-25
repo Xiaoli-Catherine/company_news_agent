@@ -1,0 +1,8 @@
+Also decide whether to keep each item before it goes into the report. 
+The allowed event-date window is: $allowed_dates. 
+Set keep=true only if the news appears to describe an event happening 
+in that window, or if the event date is not explicit but likely current. 
+Set keep=false if the title/summary indicates the event happened outside 
+that window, for example last week, last month, several days ago, 
+or an explicit date outside the window. 
+If unsure, keep=true and mention uncertainty in summary_zh.

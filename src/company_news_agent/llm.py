@@ -7,6 +7,7 @@ import json
 import os
 import re
 
+from .prompts import render_prompt
 from .types import Company, CompanyReport, NewsCluster, NewsItem
 
 
@@ -41,12 +42,7 @@ class NewsSynthesizer:
             messages=[
                 {
                     "role": "system",
-                    "content": (
-                        "You are a financial news analyst. Summarize only the supplied "
-                        "news items. Do not invent facts. Return valid JSON with keys "
-                        "overview, stock_relevance, and key_points. Keep overview and "
-                        "stock_relevance concise."
-                    ),
+                    "content": render_prompt("overview_system.txt"),
                 },
                 {
                     "role": "user",
@@ -94,13 +90,7 @@ class NewsSynthesizer:
             messages=[
                 {
                     "role": "system",
-                    "content": (
-                        "You translate financial news metadata into Simplified Chinese. "
-                        "Also write a useful Chinese summary for each news item. "
-                        "You also filter for concrete company events only. "
-                        "Preserve company names, tickers, numbers, and URLs exactly. "
-                        "Return valid JSON only."
-                    ),
+                    "content": render_prompt("translation_system.txt"),
                 },
                 {
                     "role": "user",
@@ -163,10 +153,7 @@ class NewsSynthesizer:
             messages=[
                 {
                     "role": "system",
-                    "content": (
-                        "You group news items that report the same underlying event. "
-                        "Return valid JSON only. Do not drop any item indexes."
-                    ),
+                    "content": render_prompt("clustering_system.txt"),
                 },
                 {
                     "role": "user",
@@ -218,12 +205,7 @@ class NewsSynthesizer:
 
     @staticmethod
     def _build_prompt(company: Company, clusters: list[NewsCluster]) -> str:
-        lines = [
-            f"Company: {company.name}",
-            f"Ticker: {company.ticker}",
-            "",
-            "Deduplicated news topics:",
-        ]
+        lines: list[str] = []
         for index, cluster in enumerate(clusters, start=1):
             sources = ", ".join(item.source for item in cluster.items)
             lines.extend(
@@ -233,13 +215,12 @@ class NewsSynthesizer:
                     f"   Reported by: {sources}",
                 ]
             )
-        lines.append("")
-        lines.append(
-            "Write Chinese output. Be specific about the business, financial, regulatory, "
-            "competitive, or market implications for the stock. Mention uncertainty when "
-            "the supplied news does not provide enough evidence."
+        return render_prompt(
+            "overview_user.txt",
+            company_name=company.name,
+            ticker=company.ticker,
+            topics="\n".join(lines),
         )
-        return "\n".join(lines)
 
     def _build_translation_prompt(self, items: list[NewsItem]) -> str:
         payload = {
@@ -255,18 +236,11 @@ class NewsSynthesizer:
                 for index, item in enumerate(items, start=1)
             ]
         }
-        return (
-            "Translate every news title into Simplified Chinese. For summary_zh, write "
-            "2-3 Chinese sentences, never more than 10 sentences. Cover: what happened, the main company/business line "
-            "or stakeholder involved, why it may matter to the stock, and any uncertainty "
-            "or limitation in the supplied item. If the original summary is empty or low "
-            "quality, infer cautiously from the title and do not invent specific facts. "
-            "If there is a lot of information, keep only the most important points. "
-            f"{self._date_filter_instruction(items)} "
-            f"{self._company_event_filter_instruction()} "
-            "Return JSON in this exact shape: "
-            '{"items":[{"index":1,"keep":true,"filter_reason":"","title_zh":"...","summary_zh":"..."}]}\n\n'
-            f"{json.dumps(payload, ensure_ascii=False)}"
+        return render_prompt(
+            "translation_user.txt",
+            date_filter_instruction=self._date_filter_instruction(items),
+            company_event_filter_instruction=self._company_event_filter_instruction(),
+            payload=json.dumps(payload, ensure_ascii=False),
         )
 
     def _date_filter_instruction(self, items: list[NewsItem]) -> str:
@@ -274,35 +248,15 @@ class NewsSynthesizer:
             return ""
         dates = sorted(date_value.isoformat() for date_value in self.target_dates or set())
         if not dates:
-            return (
-                "Also decide keep=true only if the item appears to describe an event in "
-                "the report date window; set keep=false if it clearly describes an older "
-                "or future event outside the window."
-            )
-        return (
-            "Also decide whether to keep each item before it goes into the report. "
-            f"The allowed event-date window is: {', '.join(dates)}. Set keep=true only "
-            "if the news appears to describe an event happening in that window, or if "
-            "the event date is not explicit but likely current. Set keep=false if the "
-            "title/summary indicates the event happened outside that window, for example "
-            "last week, last month, several days ago, or an explicit date outside the "
-            "window. If unsure, keep=true and mention uncertainty in summary_zh."
+            return render_prompt("date_filter_generic.txt")
+        return render_prompt(
+            "date_filter_window.txt",
+            allowed_dates=", ".join(dates),
         )
 
     @staticmethod
     def _company_event_filter_instruction() -> str:
-        return (
-            "Also set keep=true only for concrete company events. Keep news about earnings, "
-            "revenue, guidance, acquisitions, partnerships, product launches, lawsuits, "
-            "antitrust/regulatory actions, investigations, executive changes, layoffs, "
-            "business expansion or contraction, major contracts, capital investment, "
-            "or major operational events. Set keep=false for items that are only about "
-            "stock price movement, market commentary, analyst ratings, price targets, "
-            "technical analysis, generic stock recommendations, company culture, workplace "
-            "rankings, office perks, or non-event interviews/commentary. If an employee "
-            "topic is a concrete event such as layoffs, strike, union action, or lawsuit, "
-            "keep=true."
-        )
+        return render_prompt("company_event_filter.txt")
 
     @staticmethod
     def _build_clustering_prompt(items: list[NewsItem]) -> str:
@@ -320,19 +274,9 @@ class NewsSynthesizer:
                 for index, item in enumerate(items, start=1)
             ]
         }
-        return (
-            "Group items that are about the same concrete news event, even if different "
-            "media outlets used different wording. Do not group broad market commentary "
-            "unless the underlying event is the same. For each group, write one Chinese "
-            "topic title and a detailed Chinese summary of 3-5 sentences, never more than "
-            "10 sentences. The summary "
-            "should synthesize all grouped sources and explain: what happened, who is "
-            "involved, the potential stock relevance, whether multiple outlets are "
-            "confirming the same point, and what investors may need to watch next. Do not "
-            "invent facts beyond the supplied titles/summaries. If there is a lot of "
-            "information, keep only the most important points. Return JSON in this exact shape: "
-            '{"groups":[{"title_zh":"...","summary_zh":"...","item_indexes":[1,2]}]}\n\n'
-            f"{json.dumps(payload, ensure_ascii=False)}"
+        return render_prompt(
+            "clustering_user.txt",
+            payload=json.dumps(payload, ensure_ascii=False),
         )
 
     @staticmethod

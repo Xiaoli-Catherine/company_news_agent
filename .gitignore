@@ -5,3 +5,4 @@ __pycache__/
 *.py[cod]
 reports/
 assets/emoji/
+assets/fonts/

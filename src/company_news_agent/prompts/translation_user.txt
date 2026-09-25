@@ -1,0 +1,13 @@
+Translate every news title into Simplified Chinese. For summary_zh, 
+write 2-3 Chinese sentences, never more than 10 sentences.
+Cover: what happened, the main company/business line or stakeholder involved, 
+why it may matter to the stock, and any uncertainty or limitation in the supplied item. 
+If the original summary is empty or low quality, 
+infer cautiously from the title and do not invent specific facts. 
+If there is a lot of information, keep only the most important points.
+$date_filter_instruction
+$company_event_filter_instruction
+Return JSON in this exact shape: {"items":
+[{"index":1,"keep":true,"filter_reason":"","title_zh":"...","summary_zh":"..."}]}
+
+$payload

@@ -1,0 +1,3 @@
+Also decide keep=true only if the item appears to describe 
+an event in the report date window; set keep=false if it clearly 
+describes an older or future event outside the window.
